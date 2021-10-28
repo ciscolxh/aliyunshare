@@ -4,8 +4,9 @@ import java.util.Arrays;
 public class Main {
     static final String V1_PNG = "89504e470d0a1a0a0000000d49484452";
     static final String V2_PNG = "89504e470d0a1a0a0000";
+    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "MP4", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) {
         if (args.length == 2) {
             if ("-D".equals(args[0].toUpperCase())) {
                 initFile(args[1], 1);
@@ -66,7 +67,7 @@ public class Main {
                     if (pathname.isDirectory()) {
                         return true;
                     } else {
-                        return isDecodeFilesFilter(file);
+                        return isDecodeFilesFilter(pathname);
                     }
                 }
             });
@@ -145,16 +146,13 @@ public class Main {
      */
     private static void encodeFilesFilter(File file) {
         // 阿里支持分享的类型
-//        final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MP4", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
-        final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
         if (file.isDirectory()) {
             File[] files = file.listFiles(new FileFilter() {
                 public boolean accept(File pathname) {
                     if (pathname.isDirectory()) {
                         return true;
                     } else {
-                        String suffix = pathname.getName().substring(pathname.getName().lastIndexOf(".") + 1).toUpperCase();
-                        return !Arrays.asList(TYPES).contains(suffix);
+                        return isInEncodeFile(pathname);
                     }
                 }
             });
@@ -174,42 +172,54 @@ public class Main {
                         continue;
                     }
                     replaceFile(file1);
+
                 }
             }
         } else {
-            String suffix = file.getName().substring(file.getName().lastIndexOf(".") + 1).toUpperCase();
-            if (!Arrays.asList(TYPES).contains(suffix)) {
+            if (isInEncodeFile(file)) {
                 replaceFile(file);
             }
-
         }
+    }
+
+    private static boolean isInEncodeFile(File pathname) {
+        String suffix = pathname.getName().substring(pathname.getName().lastIndexOf(".") + 1).toUpperCase();
+        return !Arrays.asList(TYPES).contains(suffix);
     }
 
     // 编码文件
     private static void replaceFile(File oldFile) {
         String hexName = fixFileV2(oldFile.getPath());
-        oldFile.renameTo(new File(oldFile.getPath() + "_V2" + hexName + ".png"));
+        if (!hexName.isEmpty()) {
+            oldFile.renameTo(new File(oldFile.getPath() + "_V2" + hexName + ".png"));
+        }
     }
 
     private static String fixFileV2(String path) {
         try {
             int length = 128;
             RandomAccessFile file = new RandomAccessFile(path, "rw");
-            byte[] startBytes = new byte[length];
-            byte[] endBytes = new byte[length];
-            byte[] bytes = hexToByteArray(V2_PNG);
-            file.read(startBytes);
-            file.seek(file.length() - length);
-            file.read(endBytes);
-            String hexName = bytesToHex(Arrays.copyOf(endBytes, 10));
-            file.seek(0);
-            file.write(endBytes);
-            file.seek(0);
-            file.write(bytes);
-            file.seek(file.length() - length);
-            file.write(startBytes);
-            file.close();
-            return hexName;
+            if (file.length() > 128) {
+                byte[] startBytes = new byte[length];
+                byte[] endBytes = new byte[length];
+                byte[] bytes = hexToByteArray(V2_PNG);
+                file.read(startBytes);
+                file.seek(file.length() - length);
+                file.read(endBytes);
+                String hexName = bytesToHex(Arrays.copyOf(endBytes, 10));
+                file.seek(0);
+                file.write(endBytes);
+                file.seek(0);
+                file.write(bytes);
+                file.seek(file.length() - length);
+                file.write(startBytes);
+                file.close();
+                return hexName;
+            } else {
+                System.out.println(path + "文件太小");
+                return "";
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
             return "";
