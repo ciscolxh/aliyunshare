@@ -2,8 +2,10 @@ import java.io.*;
 import java.util.Arrays;
 
 public class Main {
+    static final String V1_PNG = "89504e470d0a1a0a0000000d49484452";
+    static final String V2_PNG = "89504e470d0a1a0a0000";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         if (args.length == 2) {
             if ("-D".equals(args[0].toUpperCase())) {
                 initFile(args[1], 1);
@@ -22,6 +24,7 @@ public class Main {
         System.out.println("-d <file> \t\t解码文件夹或者文件");
     }
 
+    //
     private static void initFile(String arg, int type) {
         File file = new File(arg);
         if (!file.exists()) {
@@ -40,12 +43,22 @@ public class Main {
 
     }
 
+    private static boolean isDecodeFilesFilter(File file) {
+        int position = file.getName().lastIndexOf("_");
+        if (position != -1) {
+            String suffix = file.getName().substring(position).toUpperCase();
+            return (suffix.endsWith(".PNG") && suffix.length() == 37) || (suffix.endsWith(".PNG") && suffix.length() == 27);
+        } else {
+            return false;
+        }
+    }
+
     /**
      * 解码
      *
      * @param file 要解码的文件或者是文件夹
      */
-    private static void decodeFilesFilter(File file) {
+    private static void decodeFilesFilter(final File file) {
         // 阿里支持分享的类型
         if (file.isDirectory()) {
             File[] files = file.listFiles(new FileFilter() {
@@ -53,15 +66,7 @@ public class Main {
                     if (pathname.isDirectory()) {
                         return true;
                     } else {
-                        int position = pathname.getName().lastIndexOf("_");
-                        if (position != -1) {
-                            String suffix = pathname.getName().substring(position).toUpperCase();
-                            return (suffix.endsWith(".PNG") && suffix.length() == 37);
-                        } else {
-                            return false;
-                        }
-
-
+                        return isDecodeFilesFilter(file);
                     }
                 }
             });
@@ -80,20 +85,57 @@ public class Main {
                         decodeFilesFilter(file1);
                         continue;
                     }
-                    restoreFile(file1);
+                    selectRestore(file1);
                 }
             }
         } else {
-            restoreFile(file);
+            if (isDecodeFilesFilter(file)) {
+                selectRestore(file);
+            }
         }
 
     }
 
+    private static void selectRestore(File file) {
+        if (file.getPath().contains("_V2")) {
+            restoreFileV2(file);
+        } else {
+            restoreFile(file);
+        }
+    }
+
+    // 还原文件
     private static void restoreFile(File file) {
         String suffix = file.getName().substring(file.getName().lastIndexOf("_")).toUpperCase();
         String hex = suffix.substring(1, 33);
         fixFile(hex, file.getPath());
         file.renameTo(new File(file.getPath().substring(0, file.getPath().length() - 37)));
+    }
+
+    // 第二版本的还原文件
+    private static void restoreFileV2(File oldFile) {
+        String suffix = oldFile.getName().substring(oldFile.getName().lastIndexOf("_V2")).toUpperCase();
+        String hex = suffix.substring(3, 23);
+        try {
+            int length = 128;
+            RandomAccessFile file = new RandomAccessFile(oldFile.getPath(), "rw");
+            byte[] startBytes = new byte[length];
+            byte[] endBytes = new byte[length];
+            byte[] bytes = hexToByteArray(hex);
+            file.read(startBytes);
+            file.seek(file.length() - length);
+            file.read(endBytes);
+            file.seek(0);
+            file.write(endBytes);
+            file.seek(file.length() - length);
+            file.write(startBytes);
+            file.seek(file.length() - length);
+            file.write(bytes);
+            file.close();
+            oldFile.renameTo(new File(oldFile.getPath().substring(0, oldFile.getPath().length() - 27)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -103,7 +145,8 @@ public class Main {
      */
     private static void encodeFilesFilter(File file) {
         // 阿里支持分享的类型
-        final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MP4", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+//        final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MP4", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+        final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
         if (file.isDirectory()) {
             File[] files = file.listFiles(new FileFilter() {
                 public boolean accept(File pathname) {
@@ -130,19 +173,47 @@ public class Main {
                         encodeFilesFilter(file1);
                         continue;
                     }
-
                     replaceFile(file1);
                 }
             }
         } else {
-            replaceFile(file);
+            String suffix = file.getName().substring(file.getName().lastIndexOf(".") + 1).toUpperCase();
+            if (!Arrays.asList(TYPES).contains(suffix)) {
+                replaceFile(file);
+            }
+
         }
     }
 
-    private static void replaceFile(File file1) {
-        String hexName = getFileName(file1.getPath());
-        fixFile("89504e470d0a1a0a0000000d49484452", file1.getPath());
-        file1.renameTo(new File(file1.getPath() + "_" + hexName + ".png"));
+    // 编码文件
+    private static void replaceFile(File oldFile) {
+        String hexName = fixFileV2(oldFile.getPath());
+        oldFile.renameTo(new File(oldFile.getPath() + "_V2" + hexName + ".png"));
+    }
+
+    private static String fixFileV2(String path) {
+        try {
+            int length = 128;
+            RandomAccessFile file = new RandomAccessFile(path, "rw");
+            byte[] startBytes = new byte[length];
+            byte[] endBytes = new byte[length];
+            byte[] bytes = hexToByteArray(V2_PNG);
+            file.read(startBytes);
+            file.seek(file.length() - length);
+            file.read(endBytes);
+            String hexName = bytesToHex(Arrays.copyOf(endBytes, 10));
+            file.seek(0);
+            file.write(endBytes);
+            file.seek(0);
+            file.write(bytes);
+            file.seek(file.length() - length);
+            file.write(startBytes);
+            file.close();
+            return hexName;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 
     /**
@@ -165,6 +236,7 @@ public class Main {
         }
         return headName;
     }
+
 
     /**
      * 修改文件的头信息
