@@ -2,9 +2,12 @@ import java.io.*;
 import java.util.Arrays;
 
 public class Main {
+    static final int LENGTH = 16;
     static final String V1_PNG = "89504e470d0a1a0a0000000d49484452";
     static final String V2_PNG = "89504e470d0a1a0a0000";
-    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "MP4", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+    static final String V3_TXT = "_V3.txt";
+//    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "MP4", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
 
     public static void main(String[] args) {
         if (args.length == 2) {
@@ -48,7 +51,7 @@ public class Main {
         int position = file.getName().lastIndexOf("_");
         if (position != -1) {
             String suffix = file.getName().substring(position).toUpperCase();
-            return (suffix.endsWith(".PNG") && suffix.length() == 37) || (suffix.endsWith(".PNG") && suffix.length() == 27);
+            return (suffix.endsWith(".PNG") && suffix.length() == 37) || (suffix.endsWith(".PNG") && suffix.length() == 27) || (suffix.endsWith(V3_TXT.toUpperCase()));
         } else {
             return false;
         }
@@ -100,7 +103,9 @@ public class Main {
     private static void selectRestore(File file) {
         if (file.getPath().contains("_V2")) {
             restoreFileV2(file);
-        } else {
+        } else if (file.getPath().endsWith(V3_TXT)){
+            restoreFileV3(file);
+        }else {
             restoreFile(file);
         }
     }
@@ -118,19 +123,19 @@ public class Main {
         String suffix = oldFile.getName().substring(oldFile.getName().lastIndexOf("_V2")).toUpperCase();
         String hex = suffix.substring(3, 23);
         try {
-            int length = 128;
+
             RandomAccessFile file = new RandomAccessFile(oldFile.getPath(), "rw");
-            byte[] startBytes = new byte[length];
-            byte[] endBytes = new byte[length];
+            byte[] startBytes = new byte[LENGTH];
+            byte[] endBytes = new byte[LENGTH];
             byte[] bytes = hexToByteArray(hex);
             file.read(startBytes);
-            file.seek(file.length() - length);
+            file.seek(file.length() - LENGTH);
             file.read(endBytes);
             file.seek(0);
             file.write(endBytes);
-            file.seek(file.length() - length);
+            file.seek(file.length() - LENGTH);
             file.write(startBytes);
-            file.seek(file.length() - length);
+            file.seek(file.length() - LENGTH);
             file.write(bytes);
             file.close();
             oldFile.renameTo(new File(oldFile.getPath().substring(0, oldFile.getPath().length() - 27)));
@@ -138,6 +143,35 @@ public class Main {
             e.printStackTrace();
         }
     }
+
+    // 第三版本的还原文件
+    private static void restoreFileV3(File oldFile) {
+        try {
+            RandomAccessFile file = new RandomAccessFile(oldFile.getPath(), "rw");
+            streamConversion(file, oldFile.length());
+            oldFile.renameTo(new File(oldFile.getPath().replace(V3_TXT,"")));
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void streamConversion(RandomAccessFile file, long length) throws IOException {
+        if (length > LENGTH) {
+            byte[] startBytes = new byte[LENGTH];
+            byte[] endBytes = new byte[LENGTH];
+            file.seek(0);
+            file.read(startBytes);
+            file.seek(file.length() - LENGTH);
+            file.read(endBytes);
+            file.seek(0);
+            file.write(endBytes);
+            file.seek(file.length() - LENGTH);
+            file.write(startBytes);
+            file.close();
+        }
+    }
+
 
     /**
      * 编码
@@ -189,40 +223,17 @@ public class Main {
 
     // 编码文件
     private static void replaceFile(File oldFile) {
-        String hexName = fixFileV2(oldFile.getPath());
-        if (!hexName.isEmpty()) {
-            oldFile.renameTo(new File(oldFile.getPath() + "_V2" + hexName + ".png"));
-        }
+        fixFileV3(oldFile.getPath());
+        oldFile.renameTo(new File(oldFile.getPath() + V3_TXT));
+
     }
 
-    private static String fixFileV2(String path) {
+    private static void fixFileV3(String path) {
         try {
-            int length = 128;
             RandomAccessFile file = new RandomAccessFile(path, "rw");
-            if (file.length() > 128) {
-                byte[] startBytes = new byte[length];
-                byte[] endBytes = new byte[length];
-                byte[] bytes = hexToByteArray(V2_PNG);
-                file.read(startBytes);
-                file.seek(file.length() - length);
-                file.read(endBytes);
-                String hexName = bytesToHex(Arrays.copyOf(endBytes, 10));
-                file.seek(0);
-                file.write(endBytes);
-                file.seek(0);
-                file.write(bytes);
-                file.seek(file.length() - length);
-                file.write(startBytes);
-                file.close();
-                return hexName;
-            } else {
-                System.out.println(path + "文件太小");
-                return "";
-            }
-
+            streamConversion(file, file.length());
         } catch (IOException e) {
             e.printStackTrace();
-            return "";
         }
     }
 
