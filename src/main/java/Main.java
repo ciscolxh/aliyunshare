@@ -6,8 +6,8 @@ public class Main {
     static final String V1_PNG = "89504e470d0a1a0a0000000d49484452";
     static final String V2_PNG = "89504e470d0a1a0a0000";
     static final String V3_TXT = "_V3.txt";
-//    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "MP4", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
-    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "MP4", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
+//    static final String[] TYPES = {"PNG", "JPG", "JPEG", "BMP", "GIF", "WEBP", "HEIC", "AVI", "FLV", "MPG", "ASF", "WMV", "MOV", "RMVB", "RM", "FLASH", "TS", "LIVP", "M3U8", "WMA", "MKV", "PDF", "WORD", "TXT", "PPT", "EXCEL", "OUTLOOK", "VISIO", "RTF", "TEXT", "MODE", "FONT", "AUDIO", "APPLICATION", "SRT", "SSA", "ASS", "WEBVTT", "SMI"};
 
     public static void main(String[] args) {
         if (args.length == 2) {
